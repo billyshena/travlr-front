@@ -1,152 +1,163 @@
 var React = require('react');
-var Router = require('react-router');
 
+/* React Router components */
+var Router = require('react-router');
 var Route = Router.Route;
+var HashHistory = Router.History;
 var RouteHandler = Router.RouteHandler;
 var Link = Router.Link;
+var Navigation = Router.Navigation;
 var DefaultRoute = Router.DefaultRoute;
-var TransitionGroup = require('react/lib/ReactCSSTransitionGroup');
 
+/* Custom components */
+var TransitionGroup = require('react/lib/ReactCSSTransitionGroup');
+var auth = require('./modules/auth/auth.js');
 
 
 var App = React.createClass({
-    getInitialState: function () {
-        return { states: findStates() };
+    getInitialState: function() {
+        return {
+            loggedIn: auth.loggedIn()
+        };
     },
 
-    render: function () {
-        var links = this.state.states.map(function (state) {
-            return (
-                <li key={state.abbr}>
-                    <Link
-                    to="state"
-                    params={{ abbr: state.abbr }}
-                    >{state.name}</Link>
-                </li>
-                );
+    setStateOnAuth: function(loggedIn) {
+        this.setState({
+            loggedIn: loggedIn
         });
+    },
+
+    componentWillMount: function() {
+        auth.onChange = this.setStateOnAuth;
+        auth.login();
+    },
+
+    render: function() {
         return (
-            <div className="App">
-                <ul className="Master">
-          {links}
+            <div>
+                <ul>
+                    <li>
+                        {this.state.loggedIn ? (
+                            <Link to="/logout">Log out</Link>
+                        ) : (
+                            <Link to="/login">Sign in</Link>
+                        )}
+                    </li>
+                    <li><Link to="/about">About</Link></li>
+                    <li><Link to="/dashboard">Dashboard</Link> (authenticated)</li>
                 </ul>
-                <div className="Detail">
-                    <TransitionGroup component="div" transitionName="example">
-                        <RouteHandler key={links} />
-                    </TransitionGroup>
-                </div>
+                <RouteHandler/>
             </div>
-            );
+        );
     }
 });
 
-var Index = React.createClass({
-    render: function () {
-        return <p>Select a state from the left</p>;
-    }
-});
+var Dashboard = React.createClass({
 
-var State = React.createClass({
+    mixins: [ Navigation ],
 
-    contextTypes: {
-        router: React.PropTypes.func
+    statics: {
+
+        willTransitionTo: function (transition, params, query, callback) {
+            requireAuth(transition);
+            callback();
+        }
     },
 
-    imageUrl: function (name) {
-        return "http://www.50states.com/maps/" + underscore(name) + ".gif";
-    },
 
-    render: function () {
-        var unitedState = findState(this.context.router.getCurrentParams().abbr);
+    render: function() {
+        console.log(this);
+        var token = auth.getToken();
         return (
-            <div className="State">
-                <h1>{unitedState.name}</h1>
-                <img src={this.imageUrl(unitedState.name)}/>
+            <div>
+                <h1>Dashboard</h1>
+                <p>You made it!</p>
+                <p>{token}</p>
             </div>
-            );
+        );
     }
 });
+
+var Login = React.createClass({
+
+    mixins: [ Navigation ],
+
+    getInitialState: function() {
+        return {
+            error: false
+        };
+    },
+
+    handleSubmit: function(event) {
+        event.preventDefault();
+
+        var email = findDOMNode(this.refs.email).value;
+        var pass = findDOMNode(this.refs.pass).value;
+
+        auth.login(email, pass, function(loggedIn) {
+            if (!loggedIn)
+                return this.setState({ error: true });
+
+            var location = this.props;
+
+            if (location.query && location.query.nextPathname) {
+                this.replaceWith(location.query.nextPathname);
+            } else {
+                this.replaceWith('/about');
+            }
+        });
+    },
+
+    render: function() {
+        return (
+            <form onSubmit={this.handleSubmit}>
+                <label><input ref="email" placeholder="email" defaultValue="joe@example.com"/></label>
+                <label><input ref="pass" placeholder="password"/></label> (hint: password1)<br/>
+                <button type="submit">login</button>
+                {this.state.error && (
+                    <p>Bad login information</p>
+                )}
+            </form>
+        );
+    }
+});
+
+var About = React.createClass({
+    render: function() {
+        return <h1>About</h1>;
+    }
+});
+
+var Logout = React.createClass({
+    componentDidMount: function() {
+        auth.logout();
+    },
+
+    render: function() {
+        return <p>You are now logged out</p>;
+    }
+});
+
+function requireAuth(transition) {
+
+    if (!auth.loggedIn()){
+        console.log('not logged');
+        transition.redirect('/login');
+    }
+
+}
+
 
 var routes = (
-    <Route handler={App}>
-        <DefaultRoute handler={Index}/>
-        <Route name="state" path="state/:abbr" handler={State}/>
+    <Route path="/" handler={App}>
+        <Route path="login" handler={Login}/>
+        <Route path="logout" handler={Logout}/>
+        <Route path="about" handler={About}/>
+        <Route path="dashboard" handler={Dashboard} />
     </Route>
-    );
+);
 
-Router.run(routes, function (Handler) {
+Router.run(routes, Router.HistoryLocation, function (Handler) {
     React.render(<Handler/>, document.getElementById('main'));
 });
-
-/*****************************************************************************/
-// data stuff
-
-function findState(abbr) {
-    var states = findStates();
-    for (var i = 0, l = states.length; i < l; i ++) {
-        if (states[i].abbr === abbr) {
-            return states[i];
-        }
-    }
-}
-
-function findStates() {
-    return [
-        { abbr: "AL", name: "Alabama"},
-        { abbr: "AK", name: "Alaska"},
-        { abbr: "AZ", name: "Arizona"},
-        { abbr: "AR", name: "Arkansas"},
-        { abbr: "CA", name: "California"},
-        { abbr: "CO", name: "Colorado"},
-        { abbr: "CT", name: "Connecticut"},
-        { abbr: "DE", name: "Delaware"},
-        { abbr: "FL", name: "Florida"},
-        { abbr: "GA", name: "Georgia"},
-        { abbr: "HI", name: "Hawaii"},
-        { abbr: "ID", name: "Idaho"},
-        { abbr: "IL", name: "Illinois"},
-        { abbr: "IN", name: "Indiana"},
-        { abbr: "IA", name: "Iowa"},
-        { abbr: "KS", name: "Kansas"},
-        { abbr: "KY", name: "Kentucky"},
-        { abbr: "LA", name: "Louisiana"},
-        { abbr: "ME", name: "Maine"},
-        { abbr: "MD", name: "Maryland"},
-        { abbr: "MA", name: "Massachusetts"},
-        { abbr: "MI", name: "Michigan"},
-        { abbr: "MN", name: "Minnesota"},
-        { abbr: "MS", name: "Mississippi"},
-        { abbr: "MO", name: "Missouri"},
-        { abbr: "MT", name: "Montana"},
-        { abbr: "NE", name: "Nebraska"},
-        { abbr: "NV", name: "Nevada"},
-        { abbr: "NH", name: "New Hampshire"},
-        { abbr: "NJ", name: "New Jersey"},
-        { abbr: "NM", name: "New Mexico"},
-        { abbr: "NY", name: "New York"},
-        { abbr: "NC", name: "North Carolina"},
-        { abbr: "ND", name: "North Dakota"},
-        { abbr: "OH", name: "Ohio"},
-        { abbr: "OK", name: "Oklahoma"},
-        { abbr: "OR", name: "Oregon"},
-        { abbr: "PA", name: "Pennsylvania"},
-        { abbr: "RI", name: "Rhode Island"},
-        { abbr: "SC", name: "South Carolina"},
-        { abbr: "SD", name: "South Dakota"},
-        { abbr: "TN", name: "Tennessee"},
-        { abbr: "TX", name: "Texas"},
-        { abbr: "UT", name: "Utah"},
-        { abbr: "VT", name: "Vermont"},
-        { abbr: "VA", name: "Virginia"},
-        { abbr: "WA", name: "Washington"},
-        { abbr: "WV", name: "West Virginia"},
-        { abbr: "WI", name: "Wisconsin"},
-        { abbr: "WY", name: "Wyoming"}
-    ];
-}
-
-function underscore(str) {
-    return str.toLowerCase().replace(/ /, '_');
-}
-
 
