@@ -3,5 +3,5 @@
 Copyright © 2015 TRAVLR  
 =======
 
-# frontend-scoledge
+# frontend app using React JS + Browserify
 Frontend for TRAVLR app
