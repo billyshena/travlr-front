@@ -1,7 +1,7 @@
 
 ## License ##
-Copyright © 2014 Tim Branyen (@tbranyen)  
-Licensed under the MIT license.
+Copyright © 2015 TRAVLR  
 =======
+
 # frontend-scoledge
-Frontend for the new version of Scoledge
+Frontend for TRAVLR app
