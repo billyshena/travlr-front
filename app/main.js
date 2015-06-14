@@ -1,4 +1,5 @@
 var React = require('react');
+var Header = require('./modules/header/header.jsx');
 
 /* React Router components */
 var Router = require('react-router');
@@ -35,21 +36,19 @@ var App = React.createClass({
     render: function() {
         return (
             <div>
-                <ul>
-                    <li>
-                        {this.state.loggedIn ? (
-                            <Link to="/logout">Log out</Link>
-                        ) : (
-                            <Link to="/login">Sign in</Link>
-                        )}
-                    </li>
-                    <li><Link to="/about">About</Link></li>
-                    <li><Link to="/dashboard">Dashboard</Link> (authenticated)</li>
-                </ul>
+                <Header/>
                 <RouteHandler/>
             </div>
         );
     }
+});
+
+var Home = React.createClass({
+
+    render: function() {
+        return <h1>Homeee</h1>;
+    }
+
 });
 
 var Dashboard = React.createClass({
@@ -122,12 +121,6 @@ var Login = React.createClass({
     }
 });
 
-var About = React.createClass({
-    render: function() {
-        return <h1>About</h1>;
-    }
-});
-
 var Logout = React.createClass({
     componentDidMount: function() {
         auth.logout();
@@ -152,8 +145,8 @@ var routes = (
     <Route path="/" handler={App}>
         <Route path="login" handler={Login}/>
         <Route path="logout" handler={Logout}/>
-        <Route path="about" handler={About}/>
         <Route path="dashboard" handler={Dashboard} />
+        <Route path="home" handler={Home} />
     </Route>
 );
 
